@@ -1,62 +1,31 @@
 <?php
+require 'vendor/autoload.php';
 
-function getResponseFromHuggingFace($text) {
-    $apiKey = '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'; // Substitua pela sua chave de API
-    $url = 'https://api-inference.huggingface.co/models/gpt2';
-    
+use Smalot\PdfParser\Parser;
 
-    // Prepare os dados para a requisição
-    $data = json_encode(['inputs' => $text]);
+// Carrega o PDF
+$parser = new Parser();
+$pdf = $parser->parseFile('https://cloud.it-solucoes.inf.br/transparenciaMunicipal/download/34-202407181835.pdf');
 
-    // Configure as opções do contexto para a requisição HTTP
-    $options = [
-        'http' => [
-            'header'  => [
-                "Content-Type: application/json",
-                "Authorization: Bearer $apiKey"
-            ],
-            'method'  => 'POST',
-            'content' => $data,
-        ],
-    ];
-    $context  = stream_context_create($options);
+// Extrai o texto
+$text = $pdf->getText();
 
-    // Envie a requisição e obtenha a resposta
-    $result = file_get_contents($url, false, $context);
+// Exemplo: Busca por palavras-chave no texto
+$keywords = 'OBJETO'; // Palavra ou expressão chave
 
-    // Verifique se houve erro na requisição
-    if ($result === FALSE) {
-        return 'Erro ao acessar a API.';
-    }
+$numero_contrato = 'Nº';
 
-    // Retorne a resposta decodificada
-    $response = json_decode($result, true);
-    return $response[0]['generated_text'] ?? 'Sem resposta.';
-}
 
-// Verifique se o formulário foi enviado
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['texto'])) {
-    $texto = trim($_POST['texto']);
-    $resultado = getResponseFromHuggingFace($texto);
+// Usa strpos para buscar onde está a frase ou trecho de interesse
+$position = strpos($text, $keywords);
+$n = strpos($text, $numero_contrato);
+
+if ($position !== false) {
+    // Extrai parte do texto próximo ao termo encontrado
+    $extracted_part = substr($text, $n, 300); // 300 caracteres após a palavra-chave
+    echo $extracted_part;
 } else {
-    $resultado = 'Nenhum texto enviado.';
+    
+    echo "Palavra-chave não encontrada no documento.";
 }
-
 ?>
-
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resposta da API</title>
-</head>
-<body>
-    <h1>Resposta da API</h1>
-    <strong>Texto enviado:</strong><br>
-    <p><?php echo nl2br(htmlspecialchars($texto)); ?></p>
-    <strong>Resposta:</strong><br>
-    <p><?php echo nl2br(htmlspecialchars($resultado)); ?></p>
-    <a href="index.php">Voltar</a>
-</body>
-</html>
